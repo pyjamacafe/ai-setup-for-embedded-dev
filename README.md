@@ -46,10 +46,29 @@ To manage our Python-based MCP servers and the TUI client efficiently, we use `u
 
 We use the [mcp-client-for-ollama](https://github.com/jonigl/mcp-client-for-ollama) text-based user interface (TUI) to interact with our local models and MCP tools seamlessly.
 
-Use `uv` to install the client globally so you can access the `ollmcp` command from anywhere:
+Use `uv` to install the client globally:
 ```bash
 uv tool install mcp-client-for-ollama
 ```
+
+**Important: Make `ollmcp` executable from anywhere**
+If this is your first time installing global tools with `uv`, you need to ensure its binary directory is added to your system's PATH. You can do this by sourcing the `uv` environment file in your shell configuration.
+
+* **For Zsh (macOS default & many Linux distros):**
+    ```bash
+    echo 'source $HOME/.local/bin/env' >> ~/.zshrc
+    source ~/.zshrc
+    ```
+* **For Bash (Standard Linux default):**
+    ```bash
+    echo 'source $HOME/.local/bin/env' >> ~/.bashrc
+    source ~/.bashrc
+    ```
+*(Note: If the `env` file doesn't exist on your system, you can achieve the same result by appending `export PATH="$HOME/.local/bin:$PATH"` to your respective `.zshrc` or `.bashrc` file).*
+
+Once your shell is reloaded, verify the installation by typing `ollmcp --help`.
+
+***
 
 ### 5. Adding and Running MCP Servers
 
