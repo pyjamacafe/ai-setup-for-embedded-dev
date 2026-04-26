@@ -100,3 +100,77 @@ Once the `ollmcp` client is running, you are in an interactive chat session. Use
 * `/prompts` : Browse and invoke specific prompt templates provided by your MCP servers.
 * `/server:<prompt_name>` : Quickly invoke an MCP prompt and automatically collect required arguments.
 * `im` : Toggle the **Input Mode**. Switch from single-line to multiline input (essential when pasting block configs or C++ snippets). Press `Esc` then `Enter` to submit in multiline mode.
+
+### 7. Configuring MCP Servers via JSON
+
+Instead of passing every tool via command-line arguments, you can define all your local AI tools, scripts, and MCP servers in a single JSON configuration file. This allows `ollmcp` to automatically spin up the necessary environments (like Python or Node) and attach the tools to your local model.
+
+#### Creating your `mcp-servers.json`
+
+Create a file named `mcp-servers.json` in your project root (or wherever you prefer to keep your configs). The structure requires an `mcpServers` object, where each key is the name of your server, and the value defines how to execute it.
+
+Here is an example configuration tailored for our embedded development setup:
+
+```json
+{
+  "mcpServers": {
+    "gdb_memory_walker": {
+      "command": "python3",
+      "args": [
+        "/absolute/path/to/your/repo/servers/gdb_mmu_walker.py"
+      ]
+    },
+    "aosp_log_parser": {
+      "command": "uv",
+      "args": [
+        "run",
+        "/absolute/path/to/your/repo/servers/logcat_analyzer.py"
+      ],
+      "env": {
+        "AOSP_BUILD_ENV": "raspberrypi5-userdebug"
+      }
+    },
+    "dts_validator": {
+      "command": "uvx",
+      "args": [
+        "device-tree-mcp-server"
+      ]
+    }
+  }
+}
+```
+
+**Understanding the Fields:**
+* **`command`**: The executable to run (e.g., `python3`, `node`, `uv`, or `uvx`).
+* **`args`**: The arguments passed to the command. Always use absolute paths to your scripts to avoid directory resolution issues.
+* **`env`**: (Optional) Environment variables your specific server might need, such as targeting a specific AOSP build flavor or pointing to a specific cross-compiler toolchain path.
+
+#### Running with the Configuration File
+
+Once your configuration file is ready, start the `ollmcp` client using the `--servers-json` (or `-j`) flag:
+
+```bash
+ollmcp --servers-json ./mcp-servers.json --model gemma4
+```
+
+When the client loads, type `/tools` in the interface. You should see all the tools exposed by your `gdb_memory_walker`, `aosp_log_parser`, and `dts_validator` successfully registered and ready for the AI to use.
+
+#### Pro-Tip: Auto-Discovery
+
+If you are already experimenting with MCP tools using Claude Desktop, `ollmcp` can automatically discover and use those exact same tools without needing a duplicate config file. 
+
+Just run `ollmcp` with the `--auto-discovery` (or `-a`) flag:
+
+```bash
+ollmcp --auto-discovery --model gemma4
+```
+*(This tells the client to parse `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS or its equivalent on Windows/Linux and load the servers defined there).*
+
+### 8. Resources & Community MCP Servers
+
+You don't have to build every tool from scratch! The Model Context Protocol ecosystem is growing rapidly, and there are hundreds of open-source servers you can plug directly into your local setup using the `mcp-servers.json` file. 
+
+Explore these directories to find pre-built tools for everything from local database querying (SQLite/PostgreSQL) and filesystem management to web searching and GitHub integration:
+
+* **[Official MCP Servers Repository](https://github.com/modelcontextprotocol/servers):** The core reference implementations maintained by the creators of the Model Context Protocol. This is the best place to find robust, production-ready servers and study high-quality source code.
+* **[MCP Server Registry](https://registry.modelcontextprotocol.io/):** A comprehensive, searchable directory of community-built MCP servers. If you need a tool to parse a specific file format, interact with a REST API, or pull data from external services, check this registry first.
