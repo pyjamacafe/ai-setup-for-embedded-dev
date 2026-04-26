@@ -87,3 +87,107 @@ flowchart TD
     Server2 <-->|"Parses Trace files"| Target2
     Server3 <-->|"Analyzes AST/Files"| Target3
 ```
+
+## 3. Coding Your Own MCP Tools (Using FastMCP)
+
+While the community registry (which we saw in the setup guide) is great, the true power of this setup comes from writing custom tools for your specific hardware lab. 
+
+To do this, we use **FastMCP** (part of the official Python MCP SDK). If you have ever used FastAPI for web development, FastMCP will feel instantly familiar. It handles all the complex JSON-RPC protocol boilerplate behind the scenes, allowing you to turn standard Python functions into AI tools using simple decorators.
+
+One of the Hello World's of MCP server I can think of for an embedded setting might be `a tool that allows the local LLM to read and filter your Linux kernel's dmesg`.
+
+### Step 1: Install the SDK
+First, let's ensure we have the official MCP SDK installed in your environment:
+```bash
+uv pip install mcp
+```
+
+### Step 2: The Code Breakdown
+
+Create a file named `dmesg_server.py` (location doesn't matter much at this point). We shall build it piece by piece.
+
+**1. Initialization**
+Just like starting a web server, we import the library and initialize our MCP application.
+
+```python
+import subprocess
+from mcp.server.fastmcp import FastMCP
+
+# Initialize the server with a descriptive name
+mcp = FastMCP("KernelLogServer")
+```
+
+**2. Defining the Tool (The Magic is in the Docstring)**
+To expose a function to the AI, we use the `@mcp.tool()` decorator. 
+
+*Crucial Concept:* The AI relies entirely on Python **Type Hints** and **Docstrings** to understand how to use your tool. You *must* define exactly what the tool does, what the arguments are, and what types they accept. FastMCP automatically parses this docstring into the JSON schema the LLM reads during the "handshake."
+
+```python
+@mcp.tool()
+def fetch_dmesg(lines: int = 50, filter_term: str = "") -> str:
+    """
+    Fetches recent Linux kernel ring buffer logs (dmesg).
+    Useful for debugging USB devices, driver crashes, and hardware faults.
+
+    Args:
+        lines: The number of recent log lines to retrieve (default 50).
+        filter_term: An optional keyword to filter the logs (e.g., "usb", "error", "tty").
+    """
+    try:
+        # Run dmesg with human-readable timestamps (-T)
+        result = subprocess.run(
+            ["dmesg", "-T"], 
+            capture_output=True, 
+            text=True, 
+            check=True
+        )
+        logs = result.stdout.splitlines()
+
+        # Apply the optional text filter
+        if filter_term:
+            logs = [line for line in logs if filter_term.lower() in line.lower()]
+
+        # Return the last 'N' lines as a single string
+        return "\n".join(logs[-lines:])
+    except Exception as e:
+        return f"Failed to fetch dmesg logs: {str(e)}"
+```
+
+**3. Execution Logic**
+Finally, we tell the script how to communicate. Because this is a local tool communicating with the `ollmcp` client on the same machine, we use the `stdio` (Standard Input/Output) transport.
+
+```python
+if __name__ == "__main__":
+    # Start the server listening on standard input/output
+    mcp.run(transport='stdio')
+```
+
+### Step 3: Integrating the Custom Tool
+
+Now that your server is written, you just need to tell your MCP Client where it is. Add it to your `mcp-servers.json` file (from Section 7):
+
+```json
+{
+  "mcpServers": {
+    "dmesg_analyzer": {
+      "command": "python3",
+      "args": [
+        "/absolute/path/to/your/dmesg_server.py"
+      ]
+    }
+  }
+}
+```
+
+### Step 4: Testing it Out
+
+Restart your `ollmcp` client. You can now type a natural language prompt like:
+
+> *"My custom ESP32 board isn't showing up when I plug it via USB. Can you check the kernel logs for any enumeration errors?"*
+
+**What happens next?**
+1. The LLM realizes it needs kernel logs.
+2. It sees your `fetch_dmesg` tool.
+3. It autonomously calls `fetch_dmesg(lines=20, filter_term="usb")`.
+4. Your Python script executes `dmesg`, filters the output, and returns the text.
+5. The LLM reads the result and tells you exactly why the USB handshake failed (e.g., *"It looks like device descriptor read/64 error, usually indicating a bad cable"*).
