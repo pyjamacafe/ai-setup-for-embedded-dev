@@ -191,3 +191,29 @@ Restart your `ollmcp` client. You can now type a natural language prompt like:
 3. It autonomously calls `fetch_dmesg(lines=20, filter_term="usb")`.
 4. Your Python script executes `dmesg`, filters the output, and returns the text.
 5. The LLM reads the result and tells you exactly why the USB handshake failed (e.g., *"It looks like device descriptor read/64 error, usually indicating a bad cable"*).
+
+## 4. Roadmap & Call for Contributions
+
+This repository is just the beginning of what is possible when you bridge local AI with embedded hardware. While we have provided a few core tools to get you started, there is a massive landscape of toolchains and architectures that still need MCP integration.
+
+### The `New_Ideas.md` Wishlist
+We have compiled a brainstormed list of highly requested tool ideas—spanning ARM-A baremetal debugging, TF-A, FPGA constraint checking, and Rust bootstrapping—in the [**`New_Ideas.md`**](./New_Ideas.md) file located in this repository. 
+
+If you are looking for a project to build, check out that list! It includes ideas like:
+* **GIC State Inspectors**
+* **DWARF Debug Symbol Navigators**
+* **Device Tree (DTS) Conflict Resolvers**
+* **FreeRTOS Task Profilers**
+
+### We Want Your Pull Requests!
+Are you working on an ESP32 project, tinkering with Raspberry Pi 5 AOSP builds, or deep into the Linux kernel? If you write an MCP tool that makes your life easier, **please contribute it back!**
+
+**How to contribute:**
+1. Fork this repository.
+2. Pick an idea from `New_Ideas.md` (or bring your own!).
+3. Write your MCP server using Python (`FastMCP`) or your language of choice.
+4. Ensure your tool has a clear Docstring/Schema so the LLM knows how to use it.
+5. Make sure you also add a README file and add a brief description there. Your MCP source files should ideally live in a new directory. Feel free to create one.
+6. Submit a Pull Request with a brief explanation of the hardware or toolchain you tested it against.
+
+We might be able to build the ultimate open-source, AI-assisted debugging toolkit for embedded engineers benefiting our entire community.
